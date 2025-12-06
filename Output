@@ -1,0 +1,52 @@
+import csv
+from shapely.geometry import MultiPolygon
+
+def write_layout(order, sheets, oversized, outpath):
+    sticker_ids = [s["sticker_id"] for s in order["stickers"]]
+    header = ["sheet_number","sheet_dimensions"] + [f"stickers_{sid}" for sid in sticker_ids]
+
+    rows = []
+    total = 0
+
+    for i,sh in enumerate(sheets, start=1):
+        sw,shh = sh["size"]
+        used = sum(p["area"] for p in sh["placed"])
+        waste = sw*shh - used
+        total += waste
+
+        row = {}
+        row["sheet_number"] = i
+        row["sheet_dimensions"] = f"{sw}x{shh}"
+
+        polys_by = {}
+        for p in sh["placed"]:
+            polys_by.setdefault(p["id"], []).append(p["poly"])
+
+        for sid in sticker_ids:
+            col = f"stickers_{sid}"
+            arr = polys_by.get(sid, [])
+            if not arr:
+                row[col] = "MULTIPOLYGON EMPTY"
+            else:
+                mp = MultiPolygon(arr)
+                row[col] = mp.wkt
+
+        rows.append(row)
+
+    final = {c:"" for c in header}
+    final["sheet_number"] = "TOTAL_WASTE"
+    final["sheet_dimensions"] = "ALL_SHEETS"
+    final[header[-1]] = int(total)
+    rows.append(final)
+
+    if oversized:
+        warn = {c:"" for c in header}
+        warn["sheet_number"] = "OVERSIZED"
+        warn["sheet_dimensions"] = ",".join(oversized)
+        rows.append(warn)
+
+    with open(outpath, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=header)
+        w.writeheader()
+        for r in rows:
+            w.writerow(r)
