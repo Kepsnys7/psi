@@ -4,7 +4,7 @@ from st_io.layout_writer import write_layout
 from backend.packing import pack
 from visualization.draw import visualize
 
-ORDERS_DIR = r"C:\\Users\\kepsnys9\\OneDrive\\Documents\\Python\\PSI_projektas"
+ORDERS_DIR = r"\\path\\to\\orders"
 
 def main():
     files = [f for f in os.listdir(ORDERS_DIR) if f.endswith(".csv") and not f.endswith("_layout.csv")]
